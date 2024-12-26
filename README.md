@@ -1,5 +1,5 @@
 # Rex
-Rex is a lightweight application launcher .
+Rex is a lightweight application launcher.
 
 ![Rex](misc/images/sample.png)
 
