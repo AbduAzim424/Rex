@@ -60,6 +60,7 @@ public:
 
 private:
     void createWindow();
+    bool grabKeyboard();
     xcb_visualtype_t* getVisualType() const;
 
     void clear();

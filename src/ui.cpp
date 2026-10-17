@@ -9,8 +9,12 @@
 #include "ui.hpp"
 
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
+#include <iostream>
 #include <stdexcept>
+
+#include <unistd.h>
 
 #include <cairo/cairo-xcb.h>
 
@@ -189,6 +193,35 @@ void UI::createWindow()
     );
 
     xcb_flush(m_connection);
+
+    if (!grabKeyboard())
+    {
+        std::cerr << "Warning: could not grab the keyboard; typing may not reach Rex.\n";
+    }
+}
+
+// Grabs the keyboard so key presses reach Rex even if the window manager
+// doesn't focus it. The grab fails until the window is viewable (or while
+// another client, e.g. the hotkey daemon, still holds a grab), so retry
+// for up to about a second, like dmenu does.
+bool UI::grabKeyboard()
+{
+    for (int attempt = 0; attempt < 1000; ++attempt)
+    {
+        xcb_grab_keyboard_cookie_t cookie = xcb_grab_keyboard(
+            m_connection, 1, m_window_id, XCB_CURRENT_TIME,
+            XCB_GRAB_MODE_ASYNC, XCB_GRAB_MODE_ASYNC);
+        xcb_grab_keyboard_reply_t* reply = xcb_grab_keyboard_reply(m_connection, cookie, nullptr);
+
+        bool grabbed = reply && reply->status == XCB_GRAB_STATUS_SUCCESS;
+        free(reply);
+        if (grabbed)
+        {
+            return true;
+        }
+        usleep(1000);
+    }
+    return false;
 }
 
 void UI::render(std::string_view query, const std::vector<std::string>& suggestions, size_t highlightedIndex)
