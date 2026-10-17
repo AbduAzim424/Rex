@@ -8,32 +8,20 @@
 
 #pragma once
 
-#include "types.hpp"
 #include "inputhandler.hpp"
 #include "ui.hpp"
+
+#include <xcb/xcb.h>
 
 class Rex final
 {
 public:
-    Rex() : m_index_suggestion(0)
-    {
-        init();
+    Rex();
 
-        xcb_window_t id = xcb_generate_id(m_connection);
-        m_inputHandler.init(m_connection, 6);
-        m_ui.init(m_connection, id);
-    }
-
-    void init();
-    void runEventLoop();
-public:
-    xcb_connection_t*           m_connection;
-    std::string_view            m_renderTextBuffer;
-    std::vector<std::string>    m_renderSuggestions;
+    void run();
 
 private:
-    InputHandler   m_inputHandler;
-    UI             m_ui;
-
-    ssize_t        m_index_suggestion;
+    xcb_connection_t*  m_connection;
+    InputHandler       m_inputHandler;
+    UI                 m_ui;
 };

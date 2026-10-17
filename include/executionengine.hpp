@@ -8,14 +8,15 @@
 
 #pragma once
 
-#include "types.hpp"
+#include <string>
+#include <vector>
 
 class ExecutionEngine final
 {
 public:
     void executeApplicationAndExit(const std::string& application, const std::vector<std::string>& args = {});
+
 private:
     bool executeApplication(const std::string& application, const std::vector<std::string>& args);
-
     void handleError(const std::string& message);
 };

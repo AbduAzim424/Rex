@@ -6,7 +6,12 @@
  * See the LICENSE file at the root of this repository for full details.
  */
 
-#include "../include/executionengine.hpp"
+#include "executionengine.hpp"
+
+#include <cstdlib>
+#include <iostream>
+
+#include <unistd.h>
 
 void ExecutionEngine::executeApplicationAndExit(const std::string& application, const std::vector<std::string>& args)
 {

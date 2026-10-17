@@ -6,10 +6,10 @@
  * See the LICENSE file at the root of this repository for full details.
  */
 
-#include "../include/rex.hpp"
+#include "rex.hpp"
 
 int main()
 {
     Rex rex;
-    rex.runEventLoop();
+    rex.run();
 }

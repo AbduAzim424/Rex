@@ -6,55 +6,67 @@
  * See the LICENSE file at the root of this repository for full details.
  */
 
-#include "../include/ui.hpp"
+#include "ui.hpp"
 
-void UI::init(xcb_connection_t* connection, xcb_window_t window_id)
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <stdexcept>
+
+#include <cairo/cairo-xcb.h>
+
+namespace
+{
+    constexpr double kWidthRatio = 0.17;
+    constexpr double kHeightRatio = 0.3;
+    constexpr double kHorizontalOffsetDivisor = 4.3;
+}
+
+void UI::init(xcb_connection_t* connection)
 {
     if (xcb_connection_has_error(connection))
     {
         exit(-1);
-    }   
+    }
     m_connection = connection;
-
     m_screen = xcb_setup_roots_iterator(xcb_get_setup(m_connection)).data;
+    m_window_id = xcb_generate_id(m_connection);
 
-    m_window_id = window_id;
+    m_window_width = m_screen->width_in_pixels * kWidthRatio;
+    m_window_height = m_screen->height_in_pixels * kHeightRatio;
 
-    m_window_width = m_screen->width_in_pixels * 0.17;
-    m_window_height = m_screen->height_in_pixels * 0.3;
-
-    m_x = (m_screen->width_in_pixels - m_window_width) / 4.3;
+    m_x = (m_screen->width_in_pixels - m_window_width) / kHorizontalOffsetDivisor;
     m_y = (m_screen->height_in_pixels - m_window_height) / 2;
 
     createWindow();
 
-    xcb_visualtype_t* visual = getVisualType(m_screen);
-    if (!visual) 
+    xcb_visualtype_t* visual = getVisualType();
+    if (!visual)
     {
         throw std::runtime_error("Failed to get XCB visual type.");
     }
 
     m_cairoSurface = cairo_xcb_surface_create(m_connection, m_window_id, visual, m_window_width, m_window_height);
-    if (!m_cairoSurface) 
+    if (!m_cairoSurface)
     {
         throw std::runtime_error("Failed to create Cairo surface.");
     }
 
     m_cairoContext = cairo_create(m_cairoSurface);
-    if (!m_cairoContext) 
+    if (!m_cairoContext)
     {
         throw std::runtime_error("Failed to create Cairo context.");
     }
 
     m_pangoLayout = pango_cairo_create_layout(m_cairoContext);
-    if (!m_pangoLayout) 
+    if (!m_pangoLayout)
     {
         throw std::runtime_error("Failed to create Pango layout.");
     }
     setFont(m_font);
 }
 
-void UI::createWindow() 
+void UI::createWindow()
 {
     uint32_t mask = XCB_CW_BORDER_PIXEL | XCB_CW_EVENT_MASK | XCB_CW_COLORMAP;
     uint32_t values[] = 
@@ -173,99 +185,82 @@ void UI::createWindow()
     xcb_flush(m_connection);
 }
 
-void UI::drawSearchBar(const std::string& query)
+void UI::render(std::string_view query, const std::vector<std::string>& suggestions, size_t highlightedIndex)
 {
-    const int padding = 5;  // Padding inside the rectangle
-    const int rectHeight = 30;  // Height of the rectangle
-    const int rectWidth = 10 + 45; // Adjust width based on the query length (a rough estimate)
-    const int cornerRadius = 5;  // Rounded corners radius
-    const float alpha = 0.5f;  // Transparency for the rectangle
+    clear();
+    drawSearchBar(query);
+    drawSuggestions(suggestions, highlightedIndex);
 
-    cairo_set_source_rgba(m_cairoContext, 0.5, 0.7, 1.0, alpha); // Light blue with transparency
+    cairo_surface_flush(m_cairoSurface);
+    xcb_flush(m_connection);
+}
 
-    cairo_new_path(m_cairoContext);
-    cairo_move_to(m_cairoContext, padding + cornerRadius, 0); 
+void UI::clear()
+{
+    setSourceColor(m_bgColor);
+    cairo_paint(m_cairoContext);
+}
 
-    cairo_line_to(m_cairoContext, rectWidth - cornerRadius * 2, 0);  // Top line
-    cairo_arc(m_cairoContext, rectWidth - cornerRadius, 0 + cornerRadius, cornerRadius, -M_PI_2, 0);  // Top-right corner
+void UI::drawSearchBar(std::string_view query)
+{
+    const int padding = 5;
+    const int height = 30;
+    const int right = 55;
+    const int cornerRadius = 5;
+    const double alpha = 0.5;
 
-    cairo_line_to(m_cairoContext, rectWidth, 0 + rectHeight - cornerRadius);  // Right side
-    cairo_arc(m_cairoContext, rectWidth - cornerRadius, 0 + rectHeight - cornerRadius, cornerRadius, 0, M_PI_2);  // Bottom-right corner
+    setSourceColor(m_boxColor, alpha);
+    drawRoundedRect(padding, 0, right - padding, height, cornerRadius);
+    cairo_fill(m_cairoContext);
 
-    cairo_line_to(m_cairoContext, padding + cornerRadius, 0 + rectHeight);  // Bottom side
-    cairo_arc(m_cairoContext, padding + cornerRadius, 0 + rectHeight - cornerRadius, cornerRadius, M_PI_2, M_PI);  // Bottom-left corner
+    drawText(5, 3, "Search: " + std::string(query), false);
 
-    cairo_line_to(m_cairoContext, padding, 0 + cornerRadius);  // Left side
-    cairo_arc(m_cairoContext, padding + cornerRadius, 0 + cornerRadius, cornerRadius, M_PI, -M_PI_2);  // Top-left corner
-
-    cairo_close_path(m_cairoContext);
-    cairo_fill(m_cairoContext); 
-
-    drawText(m_cairoContext, 5, 3, "Search: " + query, false);
-
-    // Draw black line under the search prompt
     cairo_set_source_rgb(m_cairoContext, 0, 0, 0);
     cairo_set_line_width(m_cairoContext, 2);
-    cairo_move_to(m_cairoContext, 5, 30); 
-    cairo_line_to(m_cairoContext, m_window_width - 5, 25);  
+    cairo_move_to(m_cairoContext, 5, 30);
+    cairo_line_to(m_cairoContext, m_window_width - 5, 25);
     cairo_stroke(m_cairoContext);
 }
 
 void UI::drawSuggestions(const std::vector<std::string>& suggestions, size_t highlightedIndex)
 {
+    const int padding = 10;
+    const int height = 40;
+    const int right = m_window_width - 1.2 * padding;
+    const int cornerRadius = 6;
+    const int verticalSpacing = 5;
+    const double alpha = 0.3;
+
     int y = 40;
-    const int padding = 10;  // Padding around text inside the rectangle
-    const int rectHeight = 40; // Height for each rectangle
-    const int rectWidth = m_window_width - 1.2 * padding; // Width for each rectangle with padding
-    const float alpha = 0.3f; // Transparency level for the rectangle (range 0.0 to 1.0)
-    const int cornerRadius = 6; // Radius for rounded corners
-    const int verticalSpacing = 5; // Vertical spacing between rectangles
-
-    for (size_t i = 0; i < suggestions.size(); ++i) 
+    for (size_t i = 0; i < suggestions.size(); ++i)
     {
-        cairo_set_source_rgba(m_cairoContext, 0.5, 0.7, 1.0, alpha); // Light blue with higher transparency
-        
-        // Set rounded corners for the rectangle
-        cairo_new_path(m_cairoContext);  // Start a new path for the rectangle
-        cairo_move_to(m_cairoContext, padding + cornerRadius, y);  // Move to the start position, adjusted for corner radius
+        setSourceColor(m_boxColor, alpha);
+        drawRoundedRect(padding, y, right - padding, height, cornerRadius);
+        cairo_fill(m_cairoContext);
 
-        // Draw the top line
-        cairo_line_to(m_cairoContext, rectWidth - cornerRadius * 2, y);  // Top line
-        cairo_arc(m_cairoContext, rectWidth - cornerRadius, y + cornerRadius, cornerRadius, -M_PI_2, 0);  // Top-right corner
+        drawText(padding + cornerRadius, y + padding, suggestions[i], highlightedIndex == i);
 
-        // Draw the right line
-        cairo_line_to(m_cairoContext, rectWidth, y + rectHeight - cornerRadius);  // Right side
-        cairo_arc(m_cairoContext, rectWidth - cornerRadius, y + rectHeight - cornerRadius, cornerRadius, 0, M_PI_2);  // Bottom-right corner
-
-        // Draw the bottom line
-        cairo_line_to(m_cairoContext, padding + cornerRadius, y + rectHeight);  // Bottom side
-        cairo_arc(m_cairoContext, padding + cornerRadius, y + rectHeight - cornerRadius, cornerRadius, M_PI_2, M_PI);  // Bottom-left corner
-
-        // Draw the left line
-        cairo_line_to(m_cairoContext, padding, y + cornerRadius);  // Left side
-        cairo_arc(m_cairoContext, padding + cornerRadius, y + cornerRadius, cornerRadius, M_PI, -M_PI_2);  // Top-left corner
-
-        cairo_close_path(m_cairoContext); 
-        cairo_fill(m_cairoContext); 
-
-        if (highlightedIndex == i) 
-        {
-            cairo_set_source_rgb(m_cairoContext, (m_highlightColor >> 16 & 0xFF) / 255.0, 
-                                 (m_highlightColor >> 8 & 0xFF) / 255.0, 
-                                 (m_highlightColor & 0xFF) / 255.0);  // Highlight color
-        } 
-        else 
-        {
-            cairo_set_source_rgb(m_cairoContext, (m_textColor >> 16 & 0xFF) / 255.0, 
-                                 (m_textColor >> 8 & 0xFF) / 255.0, 
-                                 (m_textColor & 0xFF) / 255.0);  // Regular text color
-        }
-
-        // Draw the suggestion text on top of the rectangle
-        drawText(m_cairoContext, padding + cornerRadius, y + padding, suggestions[i], highlightedIndex == i);
-        
-        y += rectHeight + verticalSpacing;  // Move to the next suggestion (with vertical spacing)
+        y += height + verticalSpacing;
     }
+}
+
+void UI::drawText(int x, int y, const std::string& text, bool highlighted)
+{
+    setSourceColor(highlighted ? m_highlightColor : m_textColor);
+    cairo_move_to(m_cairoContext, x, y);
+    pango_layout_set_text(m_pangoLayout, text.c_str(), -1);
+    pango_cairo_update_layout(m_cairoContext, m_pangoLayout);
+    pango_cairo_show_layout(m_cairoContext, m_pangoLayout);
+}
+
+void UI::drawRoundedRect(double x, double y, double width, double height, double radius)
+{
+    cairo_new_path(m_cairoContext);
+    cairo_arc(m_cairoContext, x + width - radius, y + radius,          radius, -M_PI_2, 0);
+    cairo_arc(m_cairoContext, x + width - radius, y + height - radius, radius, 0, M_PI_2);
+    cairo_arc(m_cairoContext, x + radius,         y + height - radius, radius, M_PI_2, M_PI);
+    cairo_arc(m_cairoContext, x + radius,         y + radius,          radius, M_PI, 3 * M_PI_2);
+    cairo_close_path(m_cairoContext);
 }
 
 void UI::setFont(const std::string& fontDescription)
@@ -276,68 +271,29 @@ void UI::setFont(const std::string& fontDescription)
     pango_font_description_free(font_desc);
 }
 
-void UI::setSourceColor(cairo_t* cr, uint32_t color) 
+void UI::setSourceColor(uint32_t color, double alpha)
 {
-    cairo_set_source_rgb(cr, 
-        (color >> 16 & 0xFF) / 255.0, 
-        (color >> 8 & 0xFF) / 255.0, 
-        (color & 0xFF) / 255.0
-    );
+    cairo_set_source_rgba(m_cairoContext,
+        ((color >> 16) & 0xFF) / 255.0,
+        ((color >> 8) & 0xFF) / 255.0,
+        (color & 0xFF) / 255.0,
+        alpha);
 }
 
-void UI::drawText(cairo_t* cr, int x, int y, const std::string& text, bool highlighted)
+xcb_visualtype_t* UI::getVisualType() const
 {
-    if (highlighted) 
-    {
-        cairo_set_source_rgb(cr, (m_highlightColor >> 16 & 0xFF) / 255.0, 
-                             (m_highlightColor >> 8 & 0xFF) / 255.0, 
-                             (m_highlightColor & 0xFF) / 255.0);
-    } 
-    else 
-    {
-        cairo_set_source_rgb(cr, (m_textColor >> 16 & 0xFF) / 255.0, 
-                             (m_textColor >> 8 & 0xFF) / 255.0, 
-                             (m_textColor & 0xFF) / 255.0);
-    }
-    cairo_move_to(cr, x, y);
-    pango_layout_set_text(m_pangoLayout, text.c_str(), -1);
-    pango_cairo_update_layout(cr, m_pangoLayout);
-    pango_cairo_show_layout(cr, m_pangoLayout);
-}
-
-xcb_visualtype_t* UI::getVisualType(xcb_screen_t* screen) 
-{
-    xcb_depth_iterator_t depth_iter = xcb_screen_allowed_depths_iterator(screen);
+    xcb_depth_iterator_t depth_iter = xcb_screen_allowed_depths_iterator(m_screen);
     
     for (; depth_iter.rem; xcb_depth_next(&depth_iter)) 
     {
         xcb_visualtype_iterator_t visual_iter = xcb_depth_visuals_iterator(depth_iter.data);
         for (; visual_iter.rem; xcb_visualtype_next(&visual_iter)) 
         {
-            if (screen->root_visual == visual_iter.data->visual_id) 
+            if (m_screen->root_visual == visual_iter.data->visual_id) 
             {
                 return visual_iter.data;
             }
         }
     }
     return nullptr;
-}
-
-void UI::updateUI(std::string_view typedText, std::vector<std::string> suggestions, ssize_t highlightedIndex)
-{
-    clearUI();
-    drawSearchBar(std::string(typedText));
-
-    drawSuggestions(suggestions, highlightedIndex);
-    
-    cairo_surface_flush(m_cairoSurface);
-    xcb_flush(m_connection);
-}
-
-void UI::clearUI()
-{
-    cairo_set_source_rgb(m_cairoContext, (m_bgColor >> 16 & 0xFF) / 255.0, 
-                         (m_bgColor >> 8 & 0xFF) / 255.0, 
-                         (m_bgColor & 0xFF) / 255.0);
-    cairo_paint(m_cairoContext);
 }

@@ -6,9 +6,14 @@
  * See the LICENSE file at the root of this repository for full details.
  */
 
-#include "../include/inputhandler.hpp"
+#include "inputhandler.hpp"
 
-bool InputHandler::init(xcb_connection_t* connection, ssize_t max_suggeestions)
+#include <cstdlib>
+#include <iostream>
+
+#include <X11/keysym.h>
+
+bool InputHandler::init(xcb_connection_t* connection, ssize_t maxSuggestions)
 {
     if (xcb_connection_has_error(connection))
     {
@@ -24,13 +29,13 @@ bool InputHandler::init(xcb_connection_t* connection, ssize_t max_suggeestions)
         return false;
     }
 
-    m_suggestions.populate_from_path();
-    m_max_suggestion = max_suggeestions;
+    m_suggestions.populateFromPath();
+    m_max_suggestion = maxSuggestions;
 
     return true;
 }
 
-std::string_view InputHandler::processEvents(xcb_generic_event_t* event)
+std::string_view InputHandler::processEvent(xcb_generic_event_t* event)
 {
     if (((event->response_type) & ~0x80) == XCB_KEY_PRESS) 
     {
@@ -75,8 +80,7 @@ void InputHandler::processKeyPress(xcb_key_press_event_t* k_event)
             if (!m_inputBuffer.empty()) 
             {
                 m_inputBuffer.pop_back();
-                m_text_suggestions = m_suggestions.get_fuzzy_matches(m_inputBuffer, m_max_suggestion);
-                m_suggestion_index = 0;
+                updateSuggestions();
             }
             break;
         }
@@ -129,8 +133,7 @@ void InputHandler::processKeyPress(xcb_key_press_event_t* k_event)
                 m_inputBuffer += ch;
             }
 
-            m_text_suggestions = m_suggestions.get_fuzzy_matches(m_inputBuffer, m_max_suggestion);
-            m_suggestion_index = 0;
+            updateSuggestions();
             break;
         }
     }
@@ -141,12 +144,18 @@ void InputHandler::logError(const std::string& error_message)
     std::cerr << "InputHandler Error: " << error_message << std::endl;
 }
 
-std::vector<std::string>& InputHandler::getSuggestions()
+void InputHandler::updateSuggestions()
+{
+    m_text_suggestions = m_suggestions.getMatches(m_inputBuffer, m_max_suggestion);
+    m_suggestion_index = 0;
+}
+
+const std::vector<std::string>& InputHandler::getSuggestions() const
 {
     return m_text_suggestions;
 }
 
-ssize_t InputHandler::getIndexSuggestion() const
+ssize_t InputHandler::getSelectedIndex() const
 {
     return m_suggestion_index;
 }
