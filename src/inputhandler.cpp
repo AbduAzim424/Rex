@@ -8,6 +8,7 @@
 
 #include "inputhandler.hpp"
 
+#include <cctype>
 #include <cstdlib>
 #include <iostream>
 
@@ -67,6 +68,13 @@ void InputHandler::processKeyPress(xcb_key_press_event_t* k_event)
 
     int column = shift_active ? 1 : 0;
     xcb_keysym_t keysym = xcb_key_symbols_get_keysym(m_key_symbols, keycode, column);
+
+    // Caps Lock inverts the case of letters only, so Shift+Caps gives lowercase
+    if ((k_event->state & XCB_MOD_MASK_LOCK) && keysym < 0x80 && std::isalpha(static_cast<int>(keysym)))
+    {
+        int ch = static_cast<int>(keysym);
+        keysym = std::isupper(ch) ? std::tolower(ch) : std::toupper(ch);
+    }
 
     switch (keysym)
     {
