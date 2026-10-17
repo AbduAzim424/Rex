@@ -13,7 +13,7 @@
 
 #include <X11/keysym.h>
 
-bool InputHandler::init(xcb_connection_t* connection, ssize_t maxSuggestions)
+bool InputHandler::init(xcb_connection_t* connection, size_t maxSuggestions)
 {
     if (xcb_connection_has_error(connection))
     {
@@ -72,7 +72,10 @@ void InputHandler::processKeyPress(xcb_key_press_event_t* k_event)
     {
         case XK_Return:
         {
-            m_exec_engine.executeApplicationAndExit(m_text_suggestions[m_suggestion_index], {});
+            if (m_suggestion_index < m_text_suggestions.size())
+            {
+                m_exec_engine.executeApplicationAndExit(m_text_suggestions[m_suggestion_index], {});
+            }
             break;
         }
         case XK_BackSpace:
@@ -91,36 +94,18 @@ void InputHandler::processKeyPress(xcb_key_press_event_t* k_event)
         }
         case XK_Up:
         {
-            if (m_suggestion_index == 0)
+            if (!m_text_suggestions.empty())
             {
-                if (m_max_suggestion > m_text_suggestions.size())
-                {
-                    m_suggestion_index = (m_text_suggestions.size() - 1);
-                }
-                else
-                {
-                    m_suggestion_index = (m_max_suggestion - 1);
-                }
-            }
-            else if (m_suggestion_index <= (m_max_suggestion - 1) && m_suggestion_index > 0)
-            {
-                --m_suggestion_index;
+                const size_t count = m_text_suggestions.size();
+                m_suggestion_index = (m_suggestion_index + count - 1) % count;
             }
             break;
         }
         case XK_Down:
         {
-            if (m_suggestion_index == (m_max_suggestion - 1))
+            if (!m_text_suggestions.empty())
             {
-                m_suggestion_index = 0;
-            }
-            else if (m_suggestion_index == (m_text_suggestions.size() - 1))
-            {
-                m_suggestion_index = 0;
-            }
-            else if (m_suggestion_index >= 0 && m_suggestion_index < m_max_suggestion)
-            {
-                ++m_suggestion_index;
+                m_suggestion_index = (m_suggestion_index + 1) % m_text_suggestions.size();
             }
             break;
         }
@@ -155,7 +140,7 @@ const std::vector<std::string>& InputHandler::getSuggestions() const
     return m_text_suggestions;
 }
 
-ssize_t InputHandler::getSelectedIndex() const
+size_t InputHandler::getSelectedIndex() const
 {
     return m_suggestion_index;
 }

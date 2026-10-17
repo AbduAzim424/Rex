@@ -15,7 +15,6 @@
 #include <string_view>
 #include <vector>
 
-#include <sys/types.h>
 #include <xcb/xcb.h>
 #include <xcb/xcb_keysyms.h>
 
@@ -39,13 +38,13 @@ public:
     }
 
     // Loads key symbols and scans $PATH. maxSuggestions caps the result list.
-    bool              init(xcb_connection_t* connection, ssize_t maxSuggestions);
+    bool              init(xcb_connection_t* connection, size_t maxSuggestions);
 
     // Handles one X event and returns the current query text.
     std::string_view  processEvent(xcb_generic_event_t* event);
 
     const std::vector<std::string>&  getSuggestions() const;
-    ssize_t                          getSelectedIndex() const;
+    size_t                           getSelectedIndex() const;
 
 private:
     void         processKeyPress(xcb_key_press_event_t* k_event);
@@ -61,6 +60,6 @@ private:
 
     std::string               m_inputBuffer;
     std::vector<std::string>  m_text_suggestions;
-    ssize_t                   m_suggestion_index;
-    ssize_t                   m_max_suggestion;
+    size_t                    m_suggestion_index;
+    size_t                    m_max_suggestion;
 };

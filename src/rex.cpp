@@ -13,7 +13,7 @@
 
 namespace
 {
-    constexpr ssize_t kMaxSuggestions = 6;
+    constexpr size_t kMaxSuggestions = 6;
 }
 
 Rex::Rex()
