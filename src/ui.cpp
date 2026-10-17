@@ -258,7 +258,7 @@ void UI::drawSearchBar(std::string_view query)
     cairo_set_source_rgb(m_cairoContext, 0, 0, 0);
     cairo_set_line_width(m_cairoContext, 2);
     cairo_move_to(m_cairoContext, 5, 30);
-    cairo_line_to(m_cairoContext, m_window_width - 5, 25);
+    cairo_line_to(m_cairoContext, m_window_width - 5, 30);
     cairo_stroke(m_cairoContext);
 }
 
