@@ -1,44 +1,107 @@
 # Rex
-Rex is a lightweight application launcher.
+
+Rex is a lightweight application launcher for X11, developed as part of the
+**Monteverde Linux** distribution.
 
 ![Rex](misc/images/sample.png)
 
----
+> **Status:** early development. Rex works, but it is missing features and has
+> not been hardened for daily use yet.
 
-## Description
+## What it does
 
-Rex is currently in the earliest stages of development as part of the **Monteverde Linux** distribution. It is a lightweight application launcher, but lacks a significant amount of functionality and stability at this point. Many features are still in progress, and it is not yet suitable for production use.
+Rex opens a small undecorated window, scans every directory in your `$PATH`
+for executables, and fuzzy-matches them as you type. Pick a result and press
+Enter to launch it; Rex exits right after.
 
+Matching is subsequence-based: the letters you type must appear in the
+program name in order, but not necessarily next to each other, so `ffx`
+matches `firefox`. Shorter names are ranked first.
 
-## Build
-To build Rex from source, ensure you have the following dependencies installed:
+### Keys
 
-### **Dependencies**
-- **CMake** (Version 3.30 or higher)
-- **C++ standard 17 Compatible Compiler** (e.g., GCC or Clang)
-- **XCB Libraries**:
-  - `xcb`
-  - `xcb-keysyms`
-- **Cairo** (With XCB support)
-- **Pango** (For text rendering)
+| Key           | Action                               |
+|---------------|--------------------------------------|
+| Type          | Filter the list of programs          |
+| `Up` / `Down` | Move the selection (wraps around)    |
+| `Enter`       | Launch the selected program and exit |
+| `Backspace`   | Delete the last character            |
+| `Escape`      | Quit without launching anything      |
 
-### Install these on popular Linux distributions:
-- **Arch Linux**:
-  ```bash
-  sudo pacman -S cmake gcc libxcb xcb-util-keysyms cairo pango
-### Build Instructions
-   
-1. **Create a build directory**:
-    ```bash
-    mkdir build && cd build
-2. **Configure the project using CMake**:
-    ```bash
-    cmake ..
-3. **By default, the build type is set to Debug. You can specify a different build type**:
-    ```bash
-    cmake -DCMAKE_BUILD_TYPE=Release ..
-4. **Build the project**:
-    ```bash
-    cmake --build .
+### Current limitations
+
+- Launches executables from `$PATH` only; `.desktop` entries are not read.
+- Programs are started without arguments.
+- Input is limited to printable ASCII.
+- X11 only (works under XWayland, but there is no native Wayland support).
+
+## Building
+
+### Dependencies
+
+- CMake 3.16 or newer
+- A C++17 compiler (GCC or Clang)
+- pkg-config
+- XCB: `xcb`, `xcb-keysyms`
+- Cairo (with XCB support)
+- Pango
+- X11 protocol headers (for `X11/keysym.h`)
+
+**Arch Linux**
+
+```bash
+sudo pacman -S cmake gcc pkgconf libxcb xcb-util-keysyms xorgproto cairo pango
+```
+
+**Debian / Ubuntu**
+
+```bash
+sudo apt install cmake g++ pkg-config libxcb1-dev libxcb-keysyms1-dev x11proto-dev libcairo2-dev libpango1.0-dev
+```
+
+**Fedora**
+
+```bash
+sudo dnf install cmake gcc-c++ pkgconf-pkg-config libxcb-devel xcb-util-keysyms-devel xorg-x11-proto-devel cairo-devel pango-devel
+```
+
+### Build and run
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+./build/src/Rex
+```
+
+The build type defaults to `Debug` if you don't pass one.
+
+To install (to `/usr/local/bin` by default):
+
+```bash
+sudo cmake --install build
+```
+
+Rex is meant to be bound to a hotkey in your window manager, for example
+in i3:
+
+```
+bindsym $mod+d exec Rex
+```
+
+## Project layout
+
+```
+include/            Public headers
+src/
+  launcher.cpp      Entry point
+  rex.cpp           Owns the X connection and runs the event loop
+  ui.cpp            Window creation and drawing (XCB + Cairo + Pango)
+  inputhandler.cpp  Keyboard handling and selection state
+  suggestion.cpp    $PATH scanning and fuzzy matching
+  executionengine.cpp  Launching the selected program
+```
+
 ## License
-This project is licensed under the BSD 3-Clause License. See the [LICENSE](LICENSE) file for more details.
+
+Rex is licensed under the BSD 3-Clause License. See [LICENSE](LICENSE) for
+details.
