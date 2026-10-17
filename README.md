@@ -26,14 +26,20 @@ names come first within each group.
 |---------------|--------------------------------------|
 | Type          | Filter the list of programs          |
 | `Up` / `Down` | Move the selection (wraps around)    |
-| `Enter`       | Launch the selected program and exit |
+| `Enter`       | Launch the selected program and exit; if nothing matches, run what you typed |
 | `Backspace`   | Delete the last character            |
 | `Escape`      | Quit without launching anything      |
+
+### Arguments
+
+Everything after the first word is passed to the program, so typing
+`firefox --private-window` and pressing Enter launches the selected match
+with that argument. Arguments are split like a shell would: quotes, `~` and
+`$VAR` work, but pipes, redirections and `$(...)` are not supported.
 
 ### Current limitations
 
 - Launches executables from `$PATH` only; `.desktop` entries are not read.
-- Programs are started without arguments.
 - Input is limited to printable ASCII.
 - X11 only (works under XWayland, but there is no native Wayland support).
 

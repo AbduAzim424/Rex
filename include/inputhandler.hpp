@@ -21,6 +21,9 @@
 /*
  * Turns key presses into an input string and a selected suggestion, and
  * launches the selection on Enter.
+ *
+ * The first word of the input selects the program; anything after it is
+ * passed to the program as arguments.
  */
 class InputHandler final
 {
@@ -53,6 +56,9 @@ public:
 private:
     void         processKeyPress(xcb_key_press_event_t* k_event);
     void         updateSuggestions();
+    void         launchSelection();
+    std::string  commandWord() const;
+    std::string  argumentText() const;
     static char  mapKeysymToChar(xcb_keysym_t keysym);
     static void  logError(const std::string& error_message);
 
@@ -63,6 +69,7 @@ private:
     Suggestions               m_suggestions;
 
     std::string               m_inputBuffer;
+    std::string               m_matched_command;  // command word the suggestions were computed for
     std::vector<std::string>  m_text_suggestions;
     size_t                    m_suggestion_index;
     size_t                    m_max_suggestion;

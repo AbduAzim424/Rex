@@ -80,10 +80,7 @@ void InputHandler::processKeyPress(xcb_key_press_event_t* k_event)
     {
         case XK_Return:
         {
-            if (m_suggestion_index < m_text_suggestions.size())
-            {
-                m_quit_requested = m_exec_engine.launch(m_text_suggestions[m_suggestion_index]);
-            }
+            launchSelection();
             break;
         }
         case XK_BackSpace:
@@ -138,8 +135,64 @@ void InputHandler::logError(const std::string& error_message)
 
 void InputHandler::updateSuggestions()
 {
-    m_text_suggestions = m_suggestions.getMatches(m_inputBuffer, m_max_suggestion);
+    // Only the command word is matched, so typing arguments keeps the current
+    // list and selection.
+    std::string command = commandWord();
+    if (command == m_matched_command)
+    {
+        return;
+    }
+
+    m_matched_command = std::move(command);
+    m_text_suggestions = m_suggestions.getMatches(m_matched_command, m_max_suggestion);
     m_suggestion_index = 0;
+}
+
+// Runs the selected suggestion, or the typed command if nothing matched, with
+// the rest of the input as arguments.
+void InputHandler::launchSelection()
+{
+    const std::string program = m_suggestion_index < m_text_suggestions.size()
+        ? m_text_suggestions[m_suggestion_index]
+        : commandWord();
+    if (program.empty())
+    {
+        return;
+    }
+
+    const std::string argText = argumentText();
+    std::optional<std::vector<std::string>> args = splitCommandLine(argText);
+    if (!args)
+    {
+        logError("Could not parse arguments: " + argText);
+        return;
+    }
+
+    m_quit_requested = m_exec_engine.launch(program, *args);
+}
+
+// The first space-separated word of the input.
+std::string InputHandler::commandWord() const
+{
+    const size_t start = m_inputBuffer.find_first_not_of(' ');
+    if (start == std::string::npos)
+    {
+        return {};
+    }
+    const size_t end = m_inputBuffer.find(' ', start);
+    return m_inputBuffer.substr(start, end == std::string::npos ? std::string::npos : end - start);
+}
+
+// Everything after the command word.
+std::string InputHandler::argumentText() const
+{
+    const size_t start = m_inputBuffer.find_first_not_of(' ');
+    if (start == std::string::npos)
+    {
+        return {};
+    }
+    const size_t end = m_inputBuffer.find(' ', start);
+    return end == std::string::npos ? std::string() : m_inputBuffer.substr(end + 1);
 }
 
 const std::vector<std::string>& InputHandler::getSuggestions() const

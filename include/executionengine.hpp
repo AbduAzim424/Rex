@@ -8,8 +8,15 @@
 
 #pragma once
 
+#include <optional>
 #include <string>
 #include <vector>
+
+// Splits a command line into words like a shell would (quotes, ~ and $VAR
+// are handled; command substitution is not allowed). Returns std::nullopt
+// if the text can't be parsed, e.g. an unbalanced quote or a character such
+// as | or ; that only makes sense to a real shell.
+std::optional<std::vector<std::string>> splitCommandLine(const std::string& text);
 
 /*
  * Launches programs as detached child processes.

@@ -15,6 +15,25 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <wordexp.h>
+
+std::optional<std::vector<std::string>> splitCommandLine(const std::string& text)
+{
+    wordexp_t result;
+    const int status = wordexp(text.c_str(), &result, WRDE_NOCMD);
+    if (status != 0)
+    {
+        if (status == WRDE_NOSPACE)
+        {
+            wordfree(&result);
+        }
+        return std::nullopt;
+    }
+
+    std::vector<std::string> words(result.we_wordv, result.we_wordv + result.we_wordc);
+    wordfree(&result);
+    return words;
+}
 
 bool ExecutionEngine::launch(const std::string& application, const std::vector<std::string>& args)
 {
