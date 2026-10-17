@@ -64,7 +64,12 @@ void Suggestions::addWord(const std::string& word)
         return;
     }
 
-    m_words.push_back(word);
+    // The same name can appear in several $PATH directories (or the same
+    // directory can be listed twice); only the first one is reachable anyway.
+    if (m_seen.insert(word).second)
+    {
+        m_words.push_back(word);
+    }
 }
 
 std::vector<std::string> Suggestions::getMatches(const std::string& input, size_t maxResults) const
@@ -83,10 +88,13 @@ std::vector<std::string> Suggestions::getMatches(const std::string& input, size_
         }
     }
 
-    // Shorter matches first
     std::sort(matches.begin(), matches.end(), [](const std::string& a, const std::string& b)
     {
-        return a.size() < b.size();
+        if (a.size() != b.size())
+        {
+            return a.size() < b.size();
+        }
+        return a < b;
     });
 
     if (matches.size() > maxResults)

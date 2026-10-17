@@ -9,6 +9,7 @@
 #pragma once
 
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 /*
@@ -22,12 +23,13 @@ public:
     void addWord(const std::string& word);
 
     // Returns up to maxResults words containing input as a subsequence,
-    // shortest first. Returns nothing for empty input.
+    // shortest first, ties broken alphabetically. Returns nothing for empty input.
     std::vector<std::string> getMatches(const std::string& input, size_t maxResults) const;
 
 private:
     static std::vector<std::string> split(const std::string& str, char delimiter);
     static bool isSubsequence(const std::string& input, const std::string& word);
 
-    std::vector<std::string> m_words;
+    std::vector<std::string>         m_words;
+    std::unordered_set<std::string>  m_seen;
 };
