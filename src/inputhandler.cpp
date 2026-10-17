@@ -62,7 +62,7 @@ void InputHandler::processKeyPress(xcb_key_press_event_t* k_event)
 {
     xcb_keycode_t keycode = k_event->detail;
 
-    // Determine active modifiers
+    // Column 0 of the keysym table is the unshifted symbol, column 1 shifted
     bool shift_active = k_event->state & XCB_MOD_MASK_SHIFT;
 
     int column = shift_active ? 1 : 0;

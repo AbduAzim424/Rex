@@ -110,6 +110,8 @@ std::vector<std::string> Suggestions::split(const std::string& str, char delimit
     return tokens;
 }
 
+// True if all characters of input appear in word in the same order,
+// e.g. "ffx" is a subsequence of "firefox".
 bool Suggestions::isSubsequence(const std::string& input, const std::string& word)
 {
     size_t i = 0, j = 0;

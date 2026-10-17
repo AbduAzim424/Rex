@@ -11,9 +11,14 @@
 #include <string>
 #include <vector>
 
+/*
+ * Launches programs as detached child processes.
+ */
 class ExecutionEngine final
 {
 public:
+    // Starts application (looked up in $PATH) and exits Rex if the fork
+    // succeeded.
     void executeApplicationAndExit(const std::string& application, const std::vector<std::string>& args = {});
 
 private:

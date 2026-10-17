@@ -11,12 +11,18 @@
 #include <string>
 #include <vector>
 
+/*
+ * The set of launchable program names and the matching logic over them.
+ */
 class Suggestions final
 {
 public:
+    // Adds every executable regular file found in the $PATH directories.
     void populateFromPath();
     void addWord(const std::string& word);
 
+    // Returns up to maxResults words containing input as a subsequence,
+    // shortest first. Returns nothing for empty input.
     std::vector<std::string> getMatches(const std::string& input, size_t maxResults) const;
 
 private:

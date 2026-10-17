@@ -17,6 +17,7 @@
 
 namespace
 {
+    // Window size as a fraction of the screen, and horizontal placement.
     constexpr double kWidthRatio = 0.17;
     constexpr double kHeightRatio = 0.3;
     constexpr double kHorizontalOffsetDivisor = 4.3;
@@ -88,6 +89,7 @@ void UI::createWindow()
         mask, values
     );
 
+    // Looks up an X atom by name, returning XCB_ATOM_NONE if unavailable.
     auto intern_atom = [this](const char* atom_name)
     {
         xcb_intern_atom_cookie_t cookie = xcb_intern_atom(m_connection, 0, strlen(atom_name), atom_name);
@@ -111,7 +113,8 @@ void UI::createWindow()
     xcb_atom_t net_wm_window_opacity = intern_atom("_NET_WM_WINDOW_OPACITY");
     xcb_atom_t motif_hints = intern_atom("_MOTIF_WM_HINTS");
 
-    // Set window type to utility
+    // EWMH hints: mark the window as a utility popup so window managers keep
+    // it out of the taskbar/pager and above other windows.
     if (net_wm_window_type != XCB_ATOM_NONE && net_wm_window_type_utility != XCB_ATOM_NONE)
     {
         xcb_change_property(m_connection, XCB_PROP_MODE_REPLACE, m_window_id, net_wm_window_type, XCB_ATOM_ATOM, 32, 1, &net_wm_window_type_utility);
@@ -131,13 +134,16 @@ void UI::createWindow()
         xcb_change_property(m_connection, XCB_PROP_MODE_APPEND, m_window_id, net_wm_state, XCB_ATOM_ATOM, 32, 1, states);
     }
 
-    // Set opacity to 95%
+    // _NET_WM_WINDOW_OPACITY is a 32-bit fraction of 0xFFFFFFFF; 0xF2... is ~95%.
+    // Only takes effect with a compositor.
     uint32_t opacity_value = 0xF2FFFFFF;
     if (net_wm_window_opacity != XCB_ATOM_NONE)
     {
         xcb_change_property(m_connection, XCB_PROP_MODE_REPLACE, m_window_id, net_wm_window_opacity, XCB_ATOM_CARDINAL, 32, 1, &opacity_value);
     }
 
+    // Legacy Motif hints are still the most widely supported way to ask the
+    // window manager for no title bar or borders (flags=2: decorations field set).
     struct MotifHints
     {
         uint32_t flags;
@@ -155,6 +161,7 @@ void UI::createWindow()
 
     xcb_map_window(m_connection, m_window_id);
 
+    // Ask the window manager to activate the window, then take keyboard focus.
     if (net_active_window != XCB_ATOM_NONE)
     {
         xcb_client_message_event_t event = {};
@@ -215,6 +222,7 @@ void UI::drawSearchBar(std::string_view query)
 
     drawText(5, 3, "Search: " + std::string(query), false);
 
+    // Underline separating the query from the suggestions
     cairo_set_source_rgb(m_cairoContext, 0, 0, 0);
     cairo_set_line_width(m_cairoContext, 2);
     cairo_move_to(m_cairoContext, 5, 30);
@@ -253,6 +261,7 @@ void UI::drawText(int x, int y, const std::string& text, bool highlighted)
     pango_cairo_show_layout(m_cairoContext, m_pangoLayout);
 }
 
+// Builds a rounded-rectangle path; the caller fills or strokes it.
 void UI::drawRoundedRect(double x, double y, double width, double height, double radius)
 {
     cairo_new_path(m_cairoContext);
@@ -280,6 +289,7 @@ void UI::setSourceColor(uint32_t color, double alpha)
         alpha);
 }
 
+// Finds the visual type of the root window, which Cairo needs to create a surface.
 xcb_visualtype_t* UI::getVisualType() const
 {
     xcb_depth_iterator_t depth_iter = xcb_screen_allowed_depths_iterator(m_screen);

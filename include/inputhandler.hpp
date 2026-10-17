@@ -19,6 +19,10 @@
 #include <xcb/xcb.h>
 #include <xcb/xcb_keysyms.h>
 
+/*
+ * Turns key presses into an input string and a selected suggestion, and
+ * launches the selection on Enter.
+ */
 class InputHandler final
 {
 public:
@@ -34,7 +38,10 @@ public:
         }
     }
 
+    // Loads key symbols and scans $PATH. maxSuggestions caps the result list.
     bool              init(xcb_connection_t* connection, ssize_t maxSuggestions);
+
+    // Handles one X event and returns the current query text.
     std::string_view  processEvent(xcb_generic_event_t* event);
 
     const std::vector<std::string>&  getSuggestions() const;

@@ -17,6 +17,10 @@
 #include <pango/pangocairo.h>
 #include <xcb/xcb.h>
 
+/*
+ * The launcher window: a borderless, always-on-top popup drawn with Cairo,
+ * showing the search query and a list of suggestions.
+ */
 class UI final
 {
 public:
@@ -33,7 +37,10 @@ public:
         xcb_destroy_window(m_connection, m_window_id);
     }
 
+    // Creates and maps the window and sets up the Cairo/Pango drawing state.
     void init(xcb_connection_t* connection);
+
+    // Redraws the whole window. highlightedIndex is the selected suggestion.
     void render(std::string_view query, const std::vector<std::string>& suggestions, size_t highlightedIndex);
 
 private:

@@ -34,6 +34,7 @@ bool ExecutionEngine::executeApplication(const std::string& application, const s
 
     if (pid == 0)
     {
+        // Child: replace this process with the requested program.
         std::vector<const char*> execArgs;
         execArgs.push_back(application.c_str());
         for (const auto& arg : args)
