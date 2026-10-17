@@ -17,26 +17,26 @@ void ExecutionEngine::executeApplicationAndExit(const std::string& application, 
 {
     if (application.empty()) return;
 
-    if (executeApplication(application, args)) 
+    if (executeApplication(application, args))
     {
-        exit(0); 
+        exit(0);
     }
 }
 
 bool ExecutionEngine::executeApplication(const std::string& application, const std::vector<std::string>& args)
 {
     pid_t pid = fork();
-    if (pid < 0) 
+    if (pid < 0)
     {
         handleError("Fork failed!");
         return false;
     }
 
-    if (pid == 0) 
+    if (pid == 0)
     {
         std::vector<const char*> execArgs;
         execArgs.push_back(application.c_str());
-        for (const auto& arg : args) 
+        for (const auto& arg : args)
         {
             execArgs.push_back(arg.c_str());
         }

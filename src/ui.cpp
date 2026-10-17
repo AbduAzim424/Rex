@@ -69,7 +69,7 @@ void UI::init(xcb_connection_t* connection)
 void UI::createWindow()
 {
     uint32_t mask = XCB_CW_BORDER_PIXEL | XCB_CW_EVENT_MASK | XCB_CW_COLORMAP;
-    uint32_t values[] = 
+    uint32_t values[] =
     {
         0, // Border pixel (no border)
         XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS,
@@ -88,11 +88,11 @@ void UI::createWindow()
         mask, values
     );
 
-    auto intern_atom = [this](const char* atom_name) 
+    auto intern_atom = [this](const char* atom_name)
     {
         xcb_intern_atom_cookie_t cookie = xcb_intern_atom(m_connection, 0, strlen(atom_name), atom_name);
         xcb_intern_atom_reply_t* reply = xcb_intern_atom_reply(m_connection, cookie, nullptr);
-        if (reply) 
+        if (reply)
         {
             xcb_atom_t atom = reply->atom;
             free(reply);
@@ -112,20 +112,20 @@ void UI::createWindow()
     xcb_atom_t motif_hints = intern_atom("_MOTIF_WM_HINTS");
 
     // Set window type to utility
-    if (net_wm_window_type != XCB_ATOM_NONE && net_wm_window_type_utility != XCB_ATOM_NONE) 
+    if (net_wm_window_type != XCB_ATOM_NONE && net_wm_window_type_utility != XCB_ATOM_NONE)
     {
         xcb_change_property(m_connection, XCB_PROP_MODE_REPLACE, m_window_id, net_wm_window_type, XCB_ATOM_ATOM, 32, 1, &net_wm_window_type_utility);
     }
 
     // Set window states to skip taskbar and pager
-    if (net_wm_state != XCB_ATOM_NONE && net_wm_state_skip_taskbar != XCB_ATOM_NONE && net_wm_state_skip_pager != XCB_ATOM_NONE) 
+    if (net_wm_state != XCB_ATOM_NONE && net_wm_state_skip_taskbar != XCB_ATOM_NONE && net_wm_state_skip_pager != XCB_ATOM_NONE)
     {
         xcb_atom_t states[] = {net_wm_state_skip_taskbar, net_wm_state_skip_pager};
         xcb_change_property(m_connection, XCB_PROP_MODE_APPEND, m_window_id, net_wm_state, XCB_ATOM_ATOM, 32, 2, states);
     }
 
     // Set window state to always be above other windows
-    if (net_wm_state != XCB_ATOM_NONE && net_wm_state_above != XCB_ATOM_NONE) 
+    if (net_wm_state != XCB_ATOM_NONE && net_wm_state_above != XCB_ATOM_NONE)
     {
         xcb_atom_t states[] = {net_wm_state_above};
         xcb_change_property(m_connection, XCB_PROP_MODE_APPEND, m_window_id, net_wm_state, XCB_ATOM_ATOM, 32, 1, states);
@@ -133,12 +133,12 @@ void UI::createWindow()
 
     // Set opacity to 95%
     uint32_t opacity_value = 0xF2FFFFFF;
-    if (net_wm_window_opacity != XCB_ATOM_NONE) 
+    if (net_wm_window_opacity != XCB_ATOM_NONE)
     {
         xcb_change_property(m_connection, XCB_PROP_MODE_REPLACE, m_window_id, net_wm_window_opacity, XCB_ATOM_CARDINAL, 32, 1, &opacity_value);
     }
 
-    struct MotifHints 
+    struct MotifHints
     {
         uint32_t flags;
         uint32_t functions;
@@ -148,14 +148,14 @@ void UI::createWindow()
     };
 
     MotifHints hints = {2, 0, 0, 0, 0};
-    if (motif_hints != XCB_ATOM_NONE) 
+    if (motif_hints != XCB_ATOM_NONE)
     {
         xcb_change_property(m_connection, XCB_PROP_MODE_REPLACE, m_window_id, motif_hints, motif_hints, 32, sizeof(MotifHints) / 4, &hints);
     }
 
     xcb_map_window(m_connection, m_window_id);
 
-    if (net_active_window != XCB_ATOM_NONE) 
+    if (net_active_window != XCB_ATOM_NONE)
     {
         xcb_client_message_event_t event = {};
         event.response_type = XCB_CLIENT_MESSAGE;
@@ -283,13 +283,13 @@ void UI::setSourceColor(uint32_t color, double alpha)
 xcb_visualtype_t* UI::getVisualType() const
 {
     xcb_depth_iterator_t depth_iter = xcb_screen_allowed_depths_iterator(m_screen);
-    
-    for (; depth_iter.rem; xcb_depth_next(&depth_iter)) 
+
+    for (; depth_iter.rem; xcb_depth_next(&depth_iter))
     {
         xcb_visualtype_iterator_t visual_iter = xcb_depth_visuals_iterator(depth_iter.data);
-        for (; visual_iter.rem; xcb_visualtype_next(&visual_iter)) 
+        for (; visual_iter.rem; xcb_visualtype_next(&visual_iter))
         {
-            if (m_screen->root_visual == visual_iter.data->visual_id) 
+            if (m_screen->root_visual == visual_iter.data->visual_id)
             {
                 return visual_iter.data;
             }

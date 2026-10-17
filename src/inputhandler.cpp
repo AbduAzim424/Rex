@@ -19,11 +19,11 @@ bool InputHandler::init(xcb_connection_t* connection, ssize_t maxSuggestions)
     {
         logError("Connection has an error.");
         return false;
-    }   
+    }
     m_connection = connection;
 
     m_key_symbols = xcb_key_symbols_alloc(m_connection);
-    if (!m_key_symbols) 
+    if (!m_key_symbols)
     {
         logError("Failed to allocate key symbols.");
         return false;
@@ -37,7 +37,7 @@ bool InputHandler::init(xcb_connection_t* connection, ssize_t maxSuggestions)
 
 std::string_view InputHandler::processEvent(xcb_generic_event_t* event)
 {
-    if (((event->response_type) & ~0x80) == XCB_KEY_PRESS) 
+    if (((event->response_type) & ~0x80) == XCB_KEY_PRESS)
     {
         xcb_key_press_event_t* key_event = reinterpret_cast<xcb_key_press_event_t*>(event);
         processKeyPress(key_event);
@@ -50,7 +50,7 @@ std::string_view InputHandler::processEvent(xcb_generic_event_t* event)
 char InputHandler::mapKeysymToChar(xcb_keysym_t keysym)
 {
     // Handle printable ASCII characters
-    if (keysym >= 0x20 && keysym <= 0x7E) 
+    if (keysym >= 0x20 && keysym <= 0x7E)
     {
         return static_cast<char>(keysym);
     }
@@ -61,7 +61,7 @@ char InputHandler::mapKeysymToChar(xcb_keysym_t keysym)
 void InputHandler::processKeyPress(xcb_key_press_event_t* k_event)
 {
     xcb_keycode_t keycode = k_event->detail;
-    
+
     // Determine active modifiers
     bool shift_active = k_event->state & XCB_MOD_MASK_SHIFT;
 
@@ -77,7 +77,7 @@ void InputHandler::processKeyPress(xcb_key_press_event_t* k_event)
         }
         case XK_BackSpace:
         {
-            if (!m_inputBuffer.empty()) 
+            if (!m_inputBuffer.empty())
             {
                 m_inputBuffer.pop_back();
                 updateSuggestions();
@@ -128,7 +128,7 @@ void InputHandler::processKeyPress(xcb_key_press_event_t* k_event)
         {
             // Convert the keysym to a character and append it
             char ch = mapKeysymToChar(keysym);
-            if (ch != '\0') 
+            if (ch != '\0')
             {
                 m_inputBuffer += ch;
             }
