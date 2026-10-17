@@ -22,14 +22,22 @@ public:
     void populateFromPath();
     void addWord(const std::string& word);
 
-    // Returns up to maxResults words containing input as a subsequence,
-    // shortest first, ties broken alphabetically. Returns nothing for empty input.
+    // Returns up to maxResults words matching input, ignoring case. Exact
+    // matches rank first, then prefix, substring and subsequence matches;
+    // within each group shorter words come first, then alphabetical order.
+    // Returns nothing for empty input.
     std::vector<std::string> getMatches(const std::string& input, size_t maxResults) const;
 
 private:
+    // How well a word matches the input; lower is better.
+    enum class MatchKind { Exact, Prefix, Substring, Subsequence, None };
+
+    static MatchKind classify(const std::string& input, const std::string& word);
     static std::vector<std::string> split(const std::string& str, char delimiter);
     static bool isSubsequence(const std::string& input, const std::string& word);
+    static std::string toLower(std::string str);
 
     std::vector<std::string>         m_words;
+    std::vector<std::string>         m_lowerWords;  // m_words lowercased, same order
     std::unordered_set<std::string>  m_seen;
 };

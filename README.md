@@ -14,9 +14,11 @@ Rex opens a small undecorated window, scans every directory in your `$PATH`
 for executables, and fuzzy-matches them as you type. Pick a result and press
 Enter to launch it; Rex exits right after.
 
-Matching is subsequence-based: the letters you type must appear in the
+Matching ignores case and is fuzzy: the letters you type must appear in the
 program name in order, but not necessarily next to each other, so `ffx`
-matches `firefox`. Shorter names are ranked first.
+matches `firefox`. Results are ranked exact match first, then names starting
+with what you typed, then names containing it, then fuzzy matches; shorter
+names come first within each group.
 
 ### Keys
 

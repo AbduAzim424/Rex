@@ -69,6 +69,7 @@ void Suggestions::addWord(const std::string& word)
     if (m_seen.insert(word).second)
     {
         m_words.push_back(word);
+        m_lowerWords.push_back(toLower(word));
     }
 }
 
@@ -79,30 +80,68 @@ std::vector<std::string> Suggestions::getMatches(const std::string& input, size_
         return {};
     }
 
-    std::vector<std::string> matches;
-    for (const auto& word : m_words)
+    const std::string needle = toLower(input);
+
+    struct Ranked
     {
-        if (isSubsequence(input, word))
+        MatchKind kind;
+        const std::string* word;
+    };
+
+    std::vector<Ranked> ranked;
+    for (size_t i = 0; i < m_words.size(); ++i)
+    {
+        MatchKind kind = classify(needle, m_lowerWords[i]);
+        if (kind != MatchKind::None)
         {
-            matches.push_back(word);
+            ranked.push_back({kind, &m_words[i]});
         }
     }
 
-    std::sort(matches.begin(), matches.end(), [](const std::string& a, const std::string& b)
+    std::sort(ranked.begin(), ranked.end(), [](const Ranked& a, const Ranked& b)
     {
-        if (a.size() != b.size())
+        if (a.kind != b.kind)
         {
-            return a.size() < b.size();
+            return a.kind < b.kind;
         }
-        return a < b;
+        if (a.word->size() != b.word->size())
+        {
+            return a.word->size() < b.word->size();
+        }
+        return *a.word < *b.word;
     });
 
-    if (matches.size() > maxResults)
+    std::vector<std::string> matches;
+    for (size_t i = 0; i < ranked.size() && i < maxResults; ++i)
     {
-        matches.resize(maxResults);
+        matches.push_back(*ranked[i].word);
     }
 
     return matches;
+}
+
+// Both arguments are expected to be lowercase already.
+Suggestions::MatchKind Suggestions::classify(const std::string& input, const std::string& word)
+{
+    if (word == input)
+    {
+        return MatchKind::Exact;
+    }
+
+    const size_t pos = word.find(input);
+    if (pos == 0)
+    {
+        return MatchKind::Prefix;
+    }
+    if (pos != std::string::npos)
+    {
+        return MatchKind::Substring;
+    }
+    if (isSubsequence(input, word))
+    {
+        return MatchKind::Subsequence;
+    }
+    return MatchKind::None;
 }
 
 std::vector<std::string> Suggestions::split(const std::string& str, char delimiter)
@@ -132,4 +171,13 @@ bool Suggestions::isSubsequence(const std::string& input, const std::string& wor
         j++;
     }
     return i == input.size();
+}
+
+std::string Suggestions::toLower(std::string str)
+{
+    std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c)
+    {
+        return static_cast<char>(std::tolower(c));
+    });
+    return str;
 }
