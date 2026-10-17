@@ -116,9 +116,8 @@ void InputHandler::processKeyPress(xcb_key_press_event_t* k_event)
             if (ch != '\0')
             {
                 m_inputBuffer += ch;
+                updateSuggestions();
             }
-
-            updateSuggestions();
             break;
         }
     }
