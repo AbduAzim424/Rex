@@ -13,14 +13,6 @@
 class ExecutionEngine final
 {
 public:
-    ExecutionEngine()
-    {
-    }
-
-    ~ExecutionEngine()
-    {
-    }
-
     void executeApplicationAndExit(const std::string& application, const std::vector<std::string>& args = {});
 private:
     bool executeApplication(const std::string& application, const std::vector<std::string>& args);

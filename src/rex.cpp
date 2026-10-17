@@ -23,7 +23,7 @@ void Rex::runEventLoop()
 {
     xcb_generic_event_t *event;
 
-    m_ui.drawUI("", {}, 0);
+    m_ui.updateUI("", {}, 0);
     while ((event = xcb_wait_for_event(m_connection))) 
     {
         m_renderTextBuffer = m_inputHandler.processEvents(event);

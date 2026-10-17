@@ -8,7 +8,7 @@
 
 #include "../include/inputhandler.hpp"
 
-bool InputHandler::init(xcb_connection_t* connection, xcb_window_t window_id, ssize_t max_suggeestions)
+bool InputHandler::init(xcb_connection_t* connection, ssize_t max_suggeestions)
 {
     if (xcb_connection_has_error(connection))
     {
@@ -16,27 +16,11 @@ bool InputHandler::init(xcb_connection_t* connection, xcb_window_t window_id, ss
         return false;
     }   
     m_connection = connection;
-    m_window_id = window_id;
-    m_setup = xcb_get_setup(connection);
 
     m_key_symbols = xcb_key_symbols_alloc(m_connection);
     if (!m_key_symbols) 
     {
         logError("Failed to allocate key symbols.");
-        return false;
-    }
-
-    m_first_keycode = m_setup->min_keycode;
-    m_last_keycode = m_setup->max_keycode;
-
-    // Pre-allocate the mapping structure (to handle keysyms efficiently)
-    m_num_keycodes = m_last_keycode - m_first_keycode + 1;
-    m_keysyms.resize(m_num_keycodes);
-
-    // Fetch the keyboard mapping only once at initialization
-    if (!loadKeyMapping())
-    {
-        logError("Error occured while loading mapping\n");
         return false;
     }
 
@@ -66,14 +50,7 @@ char InputHandler::mapKeysymToChar(xcb_keysym_t keysym)
         return static_cast<char>(keysym);
     }
 
-    // Handle specific keys (optional; expand as needed)
-    switch (keysym) 
-    {
-        case XK_space: return ' ';
-        case XK_exclam: return '!';
-        // Add more cases for special characters if needed
-        default: return '\0';
-    }
+    return '\0';
 }
 
 void InputHandler::processKeyPress(xcb_key_press_event_t* k_event)
@@ -98,7 +75,7 @@ void InputHandler::processKeyPress(xcb_key_press_event_t* k_event)
             if (!m_inputBuffer.empty()) 
             {
                 m_inputBuffer.pop_back();
-                m_text_suggestions = m_suggestions.get_best_matches(m_inputBuffer, m_max_suggestion);
+                m_text_suggestions = m_suggestions.get_fuzzy_matches(m_inputBuffer, m_max_suggestion);
                 m_suggestion_index = 0;
             }
             break;
@@ -152,38 +129,11 @@ void InputHandler::processKeyPress(xcb_key_press_event_t* k_event)
                 m_inputBuffer += ch;
             }
 
-            m_text_suggestions = m_suggestions.get_best_matches(m_inputBuffer, m_max_suggestion);
+            m_text_suggestions = m_suggestions.get_fuzzy_matches(m_inputBuffer, m_max_suggestion);
             m_suggestion_index = 0;
             break;
         }
     }
-}
-
-bool InputHandler::loadKeyMapping()
-{
-    xcb_get_keyboard_mapping_cookie_t cookie = xcb_get_keyboard_mapping(m_connection, m_first_keycode, m_num_keycodes);
-    m_reply = xcb_get_keyboard_mapping_reply(m_connection, cookie, nullptr);
-
-    if (!m_reply) 
-    {
-        logError("Failed to retrieve keyboard mapping");
-        return false;
-    }
-
-    m_keysyms_per_keycode = m_reply->keysyms_per_keycode;
-    xcb_keysym_t* all_keysyms = xcb_get_keyboard_mapping_keysyms(m_reply);
-
-    for (int out_inx = 0; out_inx < m_num_keycodes; ++out_inx) 
-    {
-        m_keysyms[out_inx].resize(m_keysyms_per_keycode);
-        for (int in_inx = 0; in_inx < m_keysyms_per_keycode; ++in_inx) 
-        {
-            m_keysyms[out_inx][in_inx] = all_keysyms[(out_inx * m_keysyms_per_keycode) + in_inx];
-        }
-    }
-
-    m_keysyms_loaded = true;
-    return true;
 }
 
 void InputHandler::logError(const std::string& error_message)

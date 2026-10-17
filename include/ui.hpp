@@ -10,15 +10,11 @@
 
 #include "types.hpp"
 
-#define M_PI 3.14159265358979323846
-#define M_PI_2 1.57079632679489661923
-
 class UI final
 {
 public:
     UI() : m_connection(nullptr), m_screen(nullptr), m_font("Roboto 12"), 
-        m_bgColor(0xFFFFFF), m_textColor(0x000000), m_highlightColor(0xFFAA00), 
-        m_draw_searbar_count(0), m_draw_suggestions_count(0)
+        m_bgColor(0xFFFFFF), m_textColor(0x000000), m_highlightColor(0xFFAA00)
     {
     }
 
@@ -32,7 +28,6 @@ public:
 
     void init(xcb_connection_t* connection, xcb_window_t window_id);
 
-    void drawUI(const std::string& query, const std::vector<std::string>& suggestions, size_t highlightedIndex);
     void updateUI(std::string_view typedText, std::vector<std::string> suggestions, ssize_t highlightedIndex);
     void clearUI();
 
@@ -65,7 +60,4 @@ private:
     cairo_t* m_cairoContext;
 
     PangoLayout* m_pangoLayout;
-
-    int m_draw_searbar_count;
-    int m_draw_suggestions_count;
 };

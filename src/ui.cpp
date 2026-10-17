@@ -60,8 +60,7 @@ void UI::createWindow()
     uint32_t values[] = 
     {
         0, // Border pixel (no border)
-        XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_BUTTON_PRESS |
-        XCB_EVENT_MASK_FOCUS_CHANGE | XCB_EVENT_MASK_ENTER_WINDOW | XCB_EVENT_MASK_LEAVE_WINDOW | XCB_STACK_MODE_ABOVE,
+        XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS,
         m_screen->default_colormap
     };
 
@@ -174,15 +173,6 @@ void UI::createWindow()
     xcb_flush(m_connection);
 }
 
-void UI::drawUI(const std::string& query, const std::vector<std::string>& suggestions, size_t highlightedIndex)
-{
-    clearUI();
-    drawSearchBar(query);
-    drawSuggestions(suggestions, highlightedIndex);
-    cairo_surface_flush(m_cairoSurface);
-    xcb_flush(m_connection);
-}
-
 void UI::drawSearchBar(const std::string& query)
 {
     const int padding = 5;  // Padding inside the rectangle
@@ -223,7 +213,6 @@ void UI::drawSearchBar(const std::string& query)
 
 void UI::drawSuggestions(const std::vector<std::string>& suggestions, size_t highlightedIndex)
 {
-    ++m_draw_suggestions_count;
     int y = 40;
     const int padding = 10;  // Padding around text inside the rectangle
     const int rectHeight = 40; // Height for each rectangle

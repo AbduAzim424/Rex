@@ -20,12 +20,8 @@ public:
         init();
 
         xcb_window_t id = xcb_generate_id(m_connection);
-        m_inputHandler.init(m_connection, id, 6);
+        m_inputHandler.init(m_connection, 6);
         m_ui.init(m_connection, id);
-    }
-
-    ~Rex()
-    {
     }
 
     void init();

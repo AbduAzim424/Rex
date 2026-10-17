@@ -10,81 +10,11 @@
 
 #include "types.hpp"
 
-#pragma once
-
 namespace fs = std::filesystem;
-
-struct TrieNode final
-{
-    bool m_is_end_of_word;
-    std::unordered_map<char, std::unique_ptr<TrieNode>> m_children;
-
-    TrieNode() : m_is_end_of_word(false) {}
-};
-
-struct Trie final
-{
-    Trie() : m_root(std::make_unique<TrieNode>()) 
-    {}
-
-    void insert(const std::string& word)
-    {
-        TrieNode* node = m_root.get();
-        for (char ch : word)
-        {
-            if (node->m_children.find(ch) == node->m_children.end())
-            {
-                node->m_children[ch] = std::make_unique<TrieNode>();
-            }
-            node = node->m_children[ch].get();
-        }
-        node->m_is_end_of_word = true;
-    }
-
-    std::vector<std::string> get_matches(const std::string& prefix) const
-    {
-        TrieNode* node = m_root.get();
-        std::vector<std::string> matches;
-
-        for (char ch : prefix)
-        {
-            if (node->m_children.find(ch) == node->m_children.end())
-            {
-                return matches;
-            }
-            node = node->m_children[ch].get();
-        }
-
-        collect_matches(node, prefix, matches);
-        return matches;
-    }
-
-private:
-    void collect_matches(TrieNode* node, const std::string& current, std::vector<std::string>& matches) const
-    {
-        if (!node)
-            return;
-
-        if (node->m_is_end_of_word)
-        {
-            matches.push_back(current);
-        }
-
-        for (const auto& [ch, child] : node->m_children)
-        {
-            collect_matches(child.get(), current + ch, matches);
-        }
-    }
-
-private:
-    std::unique_ptr<TrieNode> m_root;
-};
 
 class Suggestions final
 {
 public:
-    Suggestions() : m_trie(std::make_unique<Trie>()) {}
-
     void populate_from_path()
     {
         const char* path_env = std::getenv("PATH");
@@ -137,13 +67,7 @@ public:
         if (word.empty() || word.size() == 1 || std::none_of(word.begin(), word.end(), ::isalnum))
             return;
 
-        m_trie->insert(word);
         m_all_words.push_back(word);
-    }
-
-    std::vector<std::string> get_exact_matches(const std::string& prefix) const
-    {
-        return m_trie->get_matches(prefix);
     }
 
     std::vector<std::string> get_fuzzy_matches(const std::string& input, int max_distance = 2) const
@@ -178,22 +102,6 @@ public:
         return matches;
     }
 
-    std::vector<std::string> get_best_matches(const std::string& input, int max_distance = 2) const
-    {
-        std::vector<std::string> matches = get_fuzzy_matches(input, max_distance);
-
-        // Additional filter: Ignore non-alphanumeric or single-character results
-        matches.erase(std::remove_if(matches.begin(), matches.end(),
-                                    [](const std::string& word)
-                                    {
-                                        return word.empty() || word.size() == 1 ||
-                                                std::none_of(word.begin(), word.end(), ::isalnum);
-                                    }),
-                    matches.end());
-
-        return matches;
-    }
-
 private:
     static std::vector<std::string> split(const std::string& str, char delimiter)
     {
@@ -222,6 +130,5 @@ private:
         return i == input.size();
     }
 
-    std::unique_ptr<Trie> m_trie;
     std::vector<std::string> m_all_words;
 };
