@@ -24,20 +24,35 @@
 class UI final
 {
 public:
-    UI() : m_connection(nullptr), m_screen(nullptr), m_font("Roboto 12"),
-        m_bgColor(0xFFFFFF), m_textColor(0x000000), m_highlightColor(0xFFAA00), m_boxColor(0x80B3FF)
+    UI() : m_connection(nullptr), m_screen(nullptr), m_window_id(XCB_NONE),
+        m_window_width(0), m_window_height(0), m_x(0), m_y(0), m_font("Roboto 12"),
+        m_bgColor(0xFFFFFF), m_textColor(0x000000), m_highlightColor(0xFFAA00), m_boxColor(0x80B3FF),
+        m_cairoSurface(nullptr), m_cairoContext(nullptr), m_pangoLayout(nullptr)
     {
     }
 
     ~UI()
     {
-        g_object_unref(m_pangoLayout);
-        cairo_destroy(m_cairoContext);
-        cairo_surface_destroy(m_cairoSurface);
-        xcb_destroy_window(m_connection, m_window_id);
+        if (m_pangoLayout)
+        {
+            g_object_unref(m_pangoLayout);
+        }
+        if (m_cairoContext)
+        {
+            cairo_destroy(m_cairoContext);
+        }
+        if (m_cairoSurface)
+        {
+            cairo_surface_destroy(m_cairoSurface);
+        }
+        if (m_window_id != XCB_NONE)
+        {
+            xcb_destroy_window(m_connection, m_window_id);
+        }
     }
 
     // Creates and maps the window and sets up the Cairo/Pango drawing state.
+    // Throws std::runtime_error on failure.
     void init(xcb_connection_t* connection);
 
     // Redraws the whole window. highlightedIndex is the selected suggestion.

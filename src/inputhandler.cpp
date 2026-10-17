@@ -74,7 +74,7 @@ void InputHandler::processKeyPress(xcb_key_press_event_t* k_event)
         {
             if (m_suggestion_index < m_text_suggestions.size())
             {
-                m_exec_engine.executeApplicationAndExit(m_text_suggestions[m_suggestion_index], {});
+                m_quit_requested = m_exec_engine.launch(m_text_suggestions[m_suggestion_index]);
             }
             break;
         }
@@ -89,7 +89,7 @@ void InputHandler::processKeyPress(xcb_key_press_event_t* k_event)
         }
         case XK_Escape:
         {
-            exit(0);
+            m_quit_requested = true;
             break;
         }
         case XK_Up:
@@ -137,6 +137,11 @@ void InputHandler::updateSuggestions()
 const std::vector<std::string>& InputHandler::getSuggestions() const
 {
     return m_text_suggestions;
+}
+
+bool InputHandler::quitRequested() const
+{
+    return m_quit_requested;
 }
 
 size_t InputHandler::getSelectedIndex() const

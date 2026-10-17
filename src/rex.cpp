@@ -9,35 +9,41 @@
 #include "rex.hpp"
 
 #include <cstdlib>
-#include <iostream>
+#include <stdexcept>
 
 namespace
 {
     constexpr size_t kMaxSuggestions = 6;
 }
 
-Rex::Rex()
+Rex::Rex() : m_connection(xcb_connect(nullptr, nullptr))
 {
-    m_connection = xcb_connect(nullptr, nullptr);
-
-    if (xcb_connection_has_error(m_connection))
+    if (xcb_connection_has_error(m_connection.get()))
     {
-        std::cerr << "Could not connect to X server\nProcess Aborted\n";
-        exit(-1);
+        throw std::runtime_error("Could not connect to X server.");
     }
 
-    m_inputHandler.init(m_connection, kMaxSuggestions);
-    m_ui.init(m_connection);
+    if (!m_inputHandler.init(m_connection.get(), kMaxSuggestions))
+    {
+        throw std::runtime_error("Failed to initialise keyboard input.");
+    }
+
+    m_ui.init(m_connection.get());
 }
 
 void Rex::run()
 {
     m_ui.render("", {}, 0);
 
-    while (xcb_generic_event_t* event = xcb_wait_for_event(m_connection))
+    while (xcb_generic_event_t* event = xcb_wait_for_event(m_connection.get()))
     {
         std::string_view query = m_inputHandler.processEvent(event);
         free(event);
+
+        if (m_inputHandler.quitRequested())
+        {
+            break;
+        }
 
         m_ui.render(query, m_inputHandler.getSuggestions(), m_inputHandler.getSelectedIndex());
     }

@@ -11,6 +11,8 @@
 #include "inputhandler.hpp"
 #include "ui.hpp"
 
+#include <memory>
+
 #include <xcb/xcb.h>
 
 /*
@@ -20,15 +22,23 @@
 class Rex final
 {
 public:
-    // Connects to the X server and creates the window. Exits on failure.
+    // Connects to the X server and creates the window.
+    // Throws std::runtime_error on failure.
     Rex();
 
-    // Blocks processing X events until the connection closes or the user
-    // launches a program / quits.
+    // Processes X events until the user launches a program or quits, or the
+    // connection closes.
     void run();
 
 private:
-    xcb_connection_t*  m_connection;
-    InputHandler       m_inputHandler;
-    UI                 m_ui;
+    struct ConnectionDeleter
+    {
+        void operator()(xcb_connection_t* connection) const { xcb_disconnect(connection); }
+    };
+
+    // Declared first so it is destroyed last, after the window and key
+    // symbols that depend on it.
+    std::unique_ptr<xcb_connection_t, ConnectionDeleter>  m_connection;
+    InputHandler                                          m_inputHandler;
+    UI                                                    m_ui;
 };

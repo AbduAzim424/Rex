@@ -25,7 +25,8 @@
 class InputHandler final
 {
 public:
-    InputHandler() : m_connection(nullptr), m_suggestion_index(0)
+    InputHandler() : m_connection(nullptr), m_key_symbols(nullptr),
+        m_suggestion_index(0), m_max_suggestion(0), m_quit_requested(false)
     {
     }
 
@@ -46,6 +47,9 @@ public:
     const std::vector<std::string>&  getSuggestions() const;
     size_t                           getSelectedIndex() const;
 
+    // True once the user pressed Escape or a program was launched.
+    bool                             quitRequested() const;
+
 private:
     void         processKeyPress(xcb_key_press_event_t* k_event);
     void         updateSuggestions();
@@ -62,4 +66,5 @@ private:
     std::vector<std::string>  m_text_suggestions;
     size_t                    m_suggestion_index;
     size_t                    m_max_suggestion;
+    bool                      m_quit_requested;
 };

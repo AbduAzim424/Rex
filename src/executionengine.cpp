@@ -13,18 +13,13 @@
 
 #include <unistd.h>
 
-void ExecutionEngine::executeApplicationAndExit(const std::string& application, const std::vector<std::string>& args)
+bool ExecutionEngine::launch(const std::string& application, const std::vector<std::string>& args)
 {
-    if (application.empty()) return;
-
-    if (executeApplication(application, args))
+    if (application.empty())
     {
-        exit(0);
+        return false;
     }
-}
 
-bool ExecutionEngine::executeApplication(const std::string& application, const std::vector<std::string>& args)
-{
     pid_t pid = fork();
     if (pid < 0)
     {

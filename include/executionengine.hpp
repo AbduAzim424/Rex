@@ -17,11 +17,9 @@
 class ExecutionEngine final
 {
 public:
-    // Starts application (looked up in $PATH) and exits Rex if the fork
-    // succeeded.
-    void executeApplicationAndExit(const std::string& application, const std::vector<std::string>& args = {});
+    // Starts application (looked up in $PATH). Returns true if it was started.
+    bool launch(const std::string& application, const std::vector<std::string>& args = {});
 
 private:
-    bool executeApplication(const std::string& application, const std::vector<std::string>& args);
     void handleError(const std::string& message);
 };

@@ -9,7 +9,6 @@
 #include "ui.hpp"
 
 #include <cmath>
-#include <cstdlib>
 #include <cstring>
 #include <stdexcept>
 
@@ -27,7 +26,7 @@ void UI::init(xcb_connection_t* connection)
 {
     if (xcb_connection_has_error(connection))
     {
-        exit(-1);
+        throw std::runtime_error("X connection has an error.");
     }
     m_connection = connection;
     m_screen = xcb_setup_roots_iterator(xcb_get_setup(m_connection)).data;

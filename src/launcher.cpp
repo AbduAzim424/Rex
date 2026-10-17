@@ -8,8 +8,21 @@
 
 #include "rex.hpp"
 
+#include <exception>
+#include <iostream>
+
 int main()
 {
-    Rex rex;
-    rex.run();
+    try
+    {
+        Rex rex;
+        rex.run();
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Rex: " << e.what() << "\n";
+        return 1;
+    }
+
+    return 0;
 }
