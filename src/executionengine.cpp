@@ -54,6 +54,11 @@ bool ExecutionEngine::launch(const std::string& application, const std::vector<s
     {
         // Child: replace this process with the requested program.
         close(statusPipe[0]);
+
+        // Start a new session so the program is not tied to Rex's terminal or
+        // process group and survives it closing (e.g. no SIGHUP).
+        setsid();
+
         execvp(execArgs[0], const_cast<char**>(execArgs.data()));
 
         int err = errno;
