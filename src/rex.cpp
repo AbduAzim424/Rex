@@ -37,6 +37,8 @@ void Rex::run()
     while (xcb_generic_event_t* event = xcb_wait_for_event(m_connection))
     {
         std::string_view query = m_inputHandler.processEvent(event);
+        free(event);
+
         m_ui.render(query, m_inputHandler.getSuggestions(), m_inputHandler.getSelectedIndex());
     }
 }
