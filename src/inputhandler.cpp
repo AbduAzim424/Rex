@@ -30,6 +30,7 @@ bool InputHandler::init(xcb_connection_t* connection, size_t maxSuggestions)
         return false;
     }
 
+    m_suggestions.populateFromDesktopFiles();
     m_suggestions.populateFromPath();
     m_max_suggestion = maxSuggestions;
 
@@ -135,40 +136,78 @@ void InputHandler::logError(const std::string& error_message)
 
 void InputHandler::updateSuggestions()
 {
-    // Only the command word is matched, so typing arguments keeps the current
-    // list and selection.
-    std::string command = commandWord();
-    if (command == m_matched_command)
+    // Multi-word input may be a name with spaces ("visual studio"). Accept
+    // only exact, prefix or substring hits for it, so that a command followed
+    // by arguments doesn't fuzzy-match some unrelated long name.
+    std::string query = trimmedInput();
+    std::vector<Suggestion> matches;
+    bool whole = false;
+    if (query.find(' ') != std::string::npos)
     {
-        return;
+        matches = m_suggestions.getMatches(query, m_max_suggestion, false);
+        whole = !matches.empty();
     }
 
-    m_matched_command = std::move(command);
-    m_text_suggestions = m_suggestions.getMatches(m_matched_command, m_max_suggestion);
+    // Otherwise only the command word is matched, so typing arguments keeps
+    // the current list and selection.
+    if (!whole)
+    {
+        query = commandWord();
+        if (!m_matched_whole && query == m_matched_query)
+        {
+            return;
+        }
+        matches = m_suggestions.getMatches(query, m_max_suggestion);
+    }
+
+    m_matched_query = std::move(query);
+    m_matched_whole = whole;
+    m_matches = std::move(matches);
+    m_text_suggestions.clear();
+    for (const Suggestion& match : m_matches)
+    {
+        m_text_suggestions.push_back(match.label);
+    }
     m_suggestion_index = 0;
 }
 
-// Runs the selected suggestion, or the typed command if nothing matched, with
-// the rest of the input as arguments.
+// Runs the selected suggestion, or the typed command if nothing matched. When
+// the suggestions came from the command word, the rest of the input is
+// appended as arguments.
 void InputHandler::launchSelection()
 {
-    const std::string program = m_suggestion_index < m_text_suggestions.size()
-        ? m_text_suggestions[m_suggestion_index]
-        : commandWord();
-    if (program.empty())
+    std::vector<std::string> command = m_suggestion_index < m_matches.size()
+        ? m_matches[m_suggestion_index].command
+        : std::vector<std::string>{commandWord()};
+    if (command.empty() || command[0].empty())
     {
         return;
     }
 
-    const std::string argText = argumentText();
+    const std::string argText = m_matched_whole ? std::string() : argumentText();
     std::optional<std::vector<std::string>> args = splitCommandLine(argText);
     if (!args)
     {
         logError("Could not parse arguments: " + argText);
         return;
     }
+    command.insert(command.end(), args->begin(), args->end());
 
-    m_quit_requested = m_exec_engine.launch(program, *args);
+    const std::string program = command.front();
+    command.erase(command.begin());
+    m_quit_requested = m_exec_engine.launch(program, command);
+}
+
+// The input without leading or trailing spaces.
+std::string InputHandler::trimmedInput() const
+{
+    const size_t start = m_inputBuffer.find_first_not_of(' ');
+    if (start == std::string::npos)
+    {
+        return {};
+    }
+    const size_t end = m_inputBuffer.find_last_not_of(' ');
+    return m_inputBuffer.substr(start, end - start + 1);
 }
 
 // The first space-separated word of the input.

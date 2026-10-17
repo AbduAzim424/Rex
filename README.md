@@ -10,15 +10,25 @@ Rex is a lightweight application launcher for X11, developed as part of the
 
 ## What it does
 
-Rex opens a small undecorated window, scans every directory in your `$PATH`
-for executables, and fuzzy-matches them as you type. Pick a result and press
-Enter to launch it; Rex exits right after.
+Rex opens a small undecorated window and fuzzy-matches what you type against
+two sources:
+
+- **Installed applications**, by their display name (e.g. "Firefox"), read
+  from `.desktop` files in `$XDG_DATA_HOME/applications` (default
+  `~/.local/share/applications`) and each `$XDG_DATA_DIRS` entry (default
+  `/usr/local/share:/usr/share`). Entries marked `NoDisplay` or `Hidden` are
+  skipped, and a file in your home directory overrides a system file with the
+  same name.
+- **Executables** in every `$PATH` directory.
+
+Pick a result and press Enter to launch it; Rex exits right after.
 
 Matching ignores case and is fuzzy: the letters you type must appear in the
 program name in order, but not necessarily next to each other, so `ffx`
 matches `firefox`. Results are ranked exact match first, then names starting
 with what you typed, then names containing it, then fuzzy matches; shorter
-names come first within each group.
+names come first within each group, and applications come before
+executables.
 
 ### Keys
 
@@ -34,12 +44,13 @@ names come first within each group.
 
 Everything after the first word is passed to the program, so typing
 `firefox --private-window` and pressing Enter launches the selected match
-with that argument. Arguments are split like a shell would: quotes, `~` and
+with that argument. The exception is input that matches a name containing
+spaces: `visual studio` selects "Visual Studio Code" rather than running
+`visual` with the argument `studio`. Arguments are split like a shell would: quotes, `~` and
 `$VAR` work, but pipes, redirections and `$(...)` are not supported.
 
 ### Current limitations
 
-- Launches executables from `$PATH` only; `.desktop` entries are not read.
 - Input is limited to printable ASCII.
 - X11 only (works under XWayland, but there is no native Wayland support).
 
@@ -105,7 +116,8 @@ src/
   rex.cpp           Owns the X connection and runs the event loop
   ui.cpp            Window creation and drawing (XCB + Cairo + Pango)
   inputhandler.cpp  Keyboard handling and selection state
-  suggestion.cpp    $PATH scanning and fuzzy matching
+  suggestion.cpp    Collecting launchable programs and fuzzy matching
+  desktopentry.cpp  Reading .desktop files
   executionengine.cpp  Launching the selected program
 ```
 

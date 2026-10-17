@@ -4,6 +4,7 @@ add_executable(${PROJECT_NAME}
     ui.cpp
     inputhandler.cpp
     suggestion.cpp
+    desktopentry.cpp
     executionengine.cpp
 )
 

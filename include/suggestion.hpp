@@ -13,20 +13,34 @@
 #include <vector>
 
 /*
- * The set of launchable program names and the matching logic over them.
+ * Something Rex can launch: an installed application or a $PATH executable.
+ */
+struct Suggestion
+{
+    std::string               label;          // shown in the list and matched against
+    std::vector<std::string>  command;        // argv to run
+    bool                      isApplication;  // from a .desktop file
+};
+
+/*
+ * The set of launchable programs and the matching logic over them.
  */
 class Suggestions final
 {
 public:
+    // Adds applications from .desktop files. Call before populateFromPath()
+    // so an application wins over an executable with the same name.
+    void populateFromDesktopFiles();
+
     // Adds every executable regular file found in the $PATH directories.
     void populateFromPath();
-    void addWord(const std::string& word);
 
-    // Returns up to maxResults words matching input, ignoring case. Exact
-    // matches rank first, then prefix, substring and subsequence matches;
-    // within each group shorter words come first, then alphabetical order.
-    // Returns nothing for empty input.
-    std::vector<std::string> getMatches(const std::string& input, size_t maxResults) const;
+    // Returns up to maxResults suggestions whose label matches input, ignoring
+    // case. Exact matches rank first, then prefix, substring and subsequence
+    // matches; within each group shorter labels come first, applications
+    // before executables, then alphabetical order. Returns nothing for empty
+    // input. With allowFuzzy false, subsequence matches are left out.
+    std::vector<Suggestion> getMatches(const std::string& input, size_t maxResults, bool allowFuzzy = true) const;
 
 private:
     // How well a word matches the input; lower is better.
@@ -37,7 +51,10 @@ private:
     static bool isSubsequence(const std::string& input, const std::string& word);
     static std::string toLower(std::string str);
 
-    std::vector<std::string>         m_words;
-    std::vector<std::string>         m_lowerWords;  // m_words lowercased, same order
+    void add(Suggestion suggestion);
+    void addExecutable(const std::string& name);
+
+    std::vector<Suggestion>          m_entries;
+    std::vector<std::string>         m_lowerLabels;  // m_entries' labels lowercased, same order
     std::unordered_set<std::string>  m_seen;
 };

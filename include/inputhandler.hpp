@@ -22,14 +22,15 @@
  * Turns key presses into an input string and a selected suggestion, and
  * launches the selection on Enter.
  *
- * The first word of the input selects the program; anything after it is
- * passed to the program as arguments.
+ * Input containing spaces is first matched as a whole against program
+ * names (for names like "Visual Studio Code"). If nothing matches that way,
+ * the first word selects the program and the rest is passed as arguments.
  */
 class InputHandler final
 {
 public:
     InputHandler() : m_connection(nullptr), m_key_symbols(nullptr),
-        m_suggestion_index(0), m_max_suggestion(0), m_quit_requested(false)
+        m_matched_whole(false), m_suggestion_index(0), m_max_suggestion(0), m_quit_requested(false)
     {
     }
 
@@ -57,6 +58,7 @@ private:
     void         processKeyPress(xcb_key_press_event_t* k_event);
     void         updateSuggestions();
     void         launchSelection();
+    std::string  trimmedInput() const;
     std::string  commandWord() const;
     std::string  argumentText() const;
     static char  mapKeysymToChar(xcb_keysym_t keysym);
@@ -69,8 +71,10 @@ private:
     Suggestions               m_suggestions;
 
     std::string               m_inputBuffer;
-    std::string               m_matched_command;  // command word the suggestions were computed for
-    std::vector<std::string>  m_text_suggestions;
+    std::string               m_matched_query;    // text the suggestions were computed for
+    bool                      m_matched_whole;    // m_matched_query is the whole input, not the command word
+    std::vector<Suggestion>   m_matches;
+    std::vector<std::string>  m_text_suggestions;  // labels of m_matches, for the UI
     size_t                    m_suggestion_index;
     size_t                    m_max_suggestion;
     bool                      m_quit_requested;

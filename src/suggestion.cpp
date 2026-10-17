@@ -7,6 +7,7 @@
  */
 
 #include "suggestion.hpp"
+#include "desktopentry.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -15,6 +16,14 @@
 #include <iostream>
 
 namespace fs = std::filesystem;
+
+void Suggestions::populateFromDesktopFiles()
+{
+    for (DesktopEntry& entry : loadDesktopEntries())
+    {
+        add({std::move(entry.name), std::move(entry.command), true});
+    }
+}
 
 void Suggestions::populateFromPath()
 {
@@ -45,7 +54,7 @@ void Suggestions::populateFromPath()
                 const auto exec_bits = fs::perms::owner_exec | fs::perms::group_exec | fs::perms::others_exec;
                 if ((entry.status().permissions() & exec_bits) != fs::perms::none)
                 {
-                    addWord(entry.path().filename().string());
+                    addExecutable(entry.path().filename().string());
                 }
             }
         }
@@ -56,24 +65,30 @@ void Suggestions::populateFromPath()
     }
 }
 
-void Suggestions::addWord(const std::string& word)
+void Suggestions::addExecutable(const std::string& name)
 {
-    // Ignore words with only non-alphanumeric characters or single-character filenames
-    if (word.size() <= 1 || std::none_of(word.begin(), word.end(), ::isalnum))
+    // Ignore names with only non-alphanumeric characters or single-character filenames
+    if (name.size() <= 1 || std::none_of(name.begin(), name.end(), ::isalnum))
     {
         return;
     }
 
+    add({name, {name}, false});
+}
+
+void Suggestions::add(Suggestion suggestion)
+{
     // The same name can appear in several $PATH directories (or the same
-    // directory can be listed twice); only the first one is reachable anyway.
-    if (m_seen.insert(word).second)
+    // directory can be listed twice), and an application can share its name
+    // with an executable. Keep the first; applications are added first.
+    if (m_seen.insert(suggestion.label).second)
     {
-        m_words.push_back(word);
-        m_lowerWords.push_back(toLower(word));
+        m_lowerLabels.push_back(toLower(suggestion.label));
+        m_entries.push_back(std::move(suggestion));
     }
 }
 
-std::vector<std::string> Suggestions::getMatches(const std::string& input, size_t maxResults) const
+std::vector<Suggestion> Suggestions::getMatches(const std::string& input, size_t maxResults, bool allowFuzzy) const
 {
     if (input.empty())
     {
@@ -85,16 +100,16 @@ std::vector<std::string> Suggestions::getMatches(const std::string& input, size_
     struct Ranked
     {
         MatchKind kind;
-        const std::string* word;
+        const Suggestion* entry;
     };
 
     std::vector<Ranked> ranked;
-    for (size_t i = 0; i < m_words.size(); ++i)
+    for (size_t i = 0; i < m_entries.size(); ++i)
     {
-        MatchKind kind = classify(needle, m_lowerWords[i]);
-        if (kind != MatchKind::None)
+        MatchKind kind = classify(needle, m_lowerLabels[i]);
+        if (kind != MatchKind::None && (allowFuzzy || kind != MatchKind::Subsequence))
         {
-            ranked.push_back({kind, &m_words[i]});
+            ranked.push_back({kind, &m_entries[i]});
         }
     }
 
@@ -104,17 +119,21 @@ std::vector<std::string> Suggestions::getMatches(const std::string& input, size_
         {
             return a.kind < b.kind;
         }
-        if (a.word->size() != b.word->size())
+        if (a.entry->label.size() != b.entry->label.size())
         {
-            return a.word->size() < b.word->size();
+            return a.entry->label.size() < b.entry->label.size();
         }
-        return *a.word < *b.word;
+        if (a.entry->isApplication != b.entry->isApplication)
+        {
+            return a.entry->isApplication;
+        }
+        return a.entry->label < b.entry->label;
     });
 
-    std::vector<std::string> matches;
+    std::vector<Suggestion> matches;
     for (size_t i = 0; i < ranked.size() && i < maxResults; ++i)
     {
-        matches.push_back(*ranked[i].word);
+        matches.push_back(*ranked[i].entry);
     }
 
     return matches;
